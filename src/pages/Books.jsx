@@ -1,30 +1,42 @@
 import React, { useEffect, useState } from "react";
-import booksdata from "../database/books.json";
 import BookCard from "../components/Bookcard";
 
 const Books = () => {
   const [books, setBooks] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     document.title = "Books | Mahendra Verma";
-  }, []);
 
-  useEffect(() => {
-    setBooks(booksdata);
+    const fetchBooks = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/books');
+        const data = await response.json();
+        setBooks(data);
+      } catch (error) {
+        console.error("Failed to fetch books:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBooks();
   }, []);
 
   return (
     <div className="px-4 py-12">
-      {/* Page Title */}
-      <p className="font-semibold  text-4xl md:text-5xl lg:text-5xl text-white uppercase text-center">
+      <p className="font-semibold text-4xl md:text-5xl lg:text-5xl text-white uppercase text-center">
         Books
       </p>
 
-      {/* Book Cards */}
       <div className="flex flex-wrap justify-center gap-6 sm:gap-8 md:gap-10 mt-8">
-        {books.map((book) => (
-          <BookCard key={book.id} book={book} />
-        ))}
+        {loading ? (
+          <p className="text-gray-400">Loading books...</p>
+        ) : (
+          books.map((book) => (
+            <BookCard key={book._id} book={book} />
+          ))
+        )}
       </div>
     </div>
   );

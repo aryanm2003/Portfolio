@@ -14,6 +14,16 @@ import Yearwise from './pages/Yearwise'
 import Courses from './pages/Courses'
 import Subjectwise from './pages/Subjectwise'
 import BlogPage from './pages/Blogpage'
+import Dashboard from './pages/Dashboard'
+import ProtectedRoute from './components/ProtectedRoute'
+import EditBanners from './pages/admin/Editbanners'
+import EditBooks from './pages/admin/Editbooks'
+import EditYear from './pages/admin/EditYear'
+import EditSubjectwise from './pages/admin/EditSubjectwise'
+import EditTalkArticles from './pages/admin/EditTalkArticles'
+import EditCourses from './pages/admin/EditCourses'
+import EditTeamMembers from './pages/admin/EditTeamMembers'
+import EditBlogs from './pages/admin/EditBlogs'
 
 function App() {
   return (
@@ -32,6 +42,17 @@ function App() {
           <Route path="/blogs/:slug" element={<BlogPage />} />
           <Route path='/talks-articles' element={<TalksArticles/>}/>
           <Route path='/courses' element={<Courses/>}/>
+          <Route path='/admin' element={<ProtectedRoute><Dashboard/></ProtectedRoute>}/>
+          <Route path='/admin/manage-banners' element={<ProtectedRoute><EditBanners/></ProtectedRoute>}/>
+          <Route path='/admin/manage-books' element={<ProtectedRoute><EditBooks/></ProtectedRoute>}/>
+          <Route path='/admin/manage-yearwise-publications' element={<ProtectedRoute><EditYear/></ProtectedRoute>}/>
+          <Route path='/admin/manage-subjectwise-publications' element={<ProtectedRoute><EditSubjectwise/></ProtectedRoute>}/>
+          <Route path='/admin/manage-talks-articles' element={<ProtectedRoute><EditTalkArticles/></ProtectedRoute>}/>
+          <Route path='/admin/manage-courses' element={<ProtectedRoute><EditCourses/></ProtectedRoute>}/>
+          <Route path='/admin/manage-team-members' element={<ProtectedRoute><EditTeamMembers/></ProtectedRoute>}/>
+          <Route path='/admin/manage-blogs' element={<ProtectedRoute><EditBlogs/></ProtectedRoute>}/>
+
+
         </Routes>
         </div>
       <Footer/>

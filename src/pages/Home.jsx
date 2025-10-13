@@ -1,15 +1,59 @@
-import React from 'react';
-import bannersData from '../database/banners.json';
+import React, { useState } from 'react'; // <-- FIX IS HERE
+
 import BannerCarousel from '../components/BannerCarousel';
+import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
   // Just taking the first banner for this example
-  const banner = bannersData[0];
+  const [email, setEmail] = useState('');
+  const [suggestion, setSuggestion] = useState('');
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    alert('Your session has expired. Please log in again.');
+    navigate('/'); // Or navigate to a specific login page
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    console.log("Submitting with:", { email, suggestion });
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/send-feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, suggestion }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        // Admin login was successful
+        localStorage.setItem('adminToken', data.token);
+
+        // Set a timer for 30 minutes (30 * 60 * 1000 milliseconds)
+        setTimeout(handleLogout, 20 * 60 * 1000);
+
+        // Navigate to the admin dashboard
+        navigate('/admin');
+
+      } else {
+        // This was a feedback submission or a failed login attempt
+        alert(data.message || 'Feedback submitted!');
+        setEmail('');
+        setSuggestion('');
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      alert('An error occurred. Please try again.');
+    }
+  };
 
   return (
     <div className="min-h-screen mt-4 text-white font-sans">
       <BannerCarousel/>
-
 
       {/* Main content */}
       <div className="flex flex-col md:flex-row justify-between px-4 gap-4 md:px-24 py-12 ">
@@ -43,20 +87,22 @@ const Home = () => {
           <p className="text-sm  text-left w-[90%] mb-3">
             Sign up for Fonda’s quarterly email newsletter to receive news on book releases, events, exclusive content, sneak peeks, giveaways, and other random cool stuff.
           </p>
-          <form className="flex max-w-[70%] mx-auto flex-col space-y-4">
-            {/* Email input with placeholder */}
+          <form onSubmit={handleSubmit} className="flex max-w-[70%] mx-auto flex-col space-y-4">
             <div className="flex flex-col">
               <input
                 type="email"
                 placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="p-2 rounded text-white border border-gray-200 focus:outline-none bg-gray-800"
               />
             </div>
-
             
             <div className="flex flex-col">
               <textarea
                 placeholder="Write your suggestion..."
+                value={suggestion}
+                onChange={(e) => setSuggestion(e.target.value)}
                 className="p-2 rounded h-[60px] text-white border border-gray-200 focus:outline-none bg-gray-800 resize-none"
               />
             </div>

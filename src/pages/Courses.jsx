@@ -1,16 +1,31 @@
 import React, { useState, useEffect } from "react";
 import BlogCard from "../components/BlogCard";
-import coursesData from "../database/courses.json";
 
 const Courses = () => {
   const [activeTab, setActiveTab] = useState("online");
-
-  // Filter data dynamically based on category
-  const data = coursesData.filter((course) => course.category === activeTab);
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     document.title = "Courses | Mahendra Verma";
+
+    const fetchCourses = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/courses');
+        const data = await response.json();
+        setCourses(data);
+      } catch (error) {
+        console.error("Failed to fetch courses:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
   }, []);
+
+  // Filter the fetched data based on the active tab
+  const filteredData = courses.filter((course) => course.category === activeTab);
 
   return (
     <div className="min-h-screen lg:mt-5 md:mt-5 max-w-7xl justify-center text-white py-12 px-6">
@@ -44,18 +59,21 @@ const Courses = () => {
       {/* Content */}
       <div className="transition-all duration-500 ease-in-out">
         <div className="flex flex-col items-center gap-10">
-          {data.map((item, index) => (
-            <div className="w-full md:w-7/8 lg:w-[85%]" key={index}>
-              <BlogCard
-                title={item.title}
-                content={item.content}
-                image={item.image}
-                docLink={item.docLink}
-              />
-            </div>
-          ))}
-          {data.length === 0 && (
-            <p className="text-gray-400">No courses available.</p>
+          {loading ? (
+            <p className="text-gray-400">Loading courses...</p>
+          ) : filteredData.length > 0 ? (
+            filteredData.map((item) => (
+              <div className="w-full md:w-7/8 lg:w-[85%]" key={item._id}>
+                <BlogCard
+                  title={item.title}
+                  content={item.content}
+                  image={item.image}
+                  docLink={item.docLink}
+                />
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-400">No courses available for this category.</p>
           )}
         </div>
       </div>

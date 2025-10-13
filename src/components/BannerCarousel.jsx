@@ -1,37 +1,66 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import bannersData from "../database/banners.json";
 
 const BannerCarousel = () => {
+  const [banners, setBanners] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  // Auto-change every 5 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % bannersData.length);
-    }, 5000);
-    return () => clearInterval(interval);
+    const fetchBanners = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/banners');
+        const data = await response.json();
+        setBanners(data);
+      } catch (error) {
+        console.error("Failed to fetch banners:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBanners();
   }, []);
 
+  // Auto-change every 5 seconds, only if there are banners
+  useEffect(() => {
+    if (banners.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % banners.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [banners.length]);
+
   const prevSlide = () => {
-    setCurrentIndex((prev) => (prev - 1 + bannersData.length) % bannersData.length);
+    if (banners.length === 0) return;
+    setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length);
   };
 
   const nextSlide = () => {
-    setCurrentIndex((prev) => (prev + 1) % bannersData.length);
+    if (banners.length === 0) return;
+    setCurrentIndex((prev) => (prev + 1) % banners.length);
   };
 
   const goToSlide = (index) => {
     setCurrentIndex(index);
   };
 
-  const banner = bannersData[currentIndex];
+  if (loading) {
+    return <div className="relative mb-6 w-full h-[420px] bg-gray-800 flex justify-center items-center"><p className="text-white">Loading Banners...</p></div>;
+  }
+  
+  if (banners.length === 0) {
+    return <div className="relative mb-6 w-full h-[420px] bg-gray-900 flex justify-center items-center"><p className="text-white">No banners available.</p></div>;
+  }
+
+  const banner = banners[currentIndex];
 
   return (
     <div className="relative mb-6 w-full">
       {/* Banner Image + Arrows + Dots */}
       <div
-        className="relative w-full h-[420px] flex items-center justify-center transition-all duration-500"
+        className="relative w-full h-[420px] flex items-center justify-center transition-all duration-500 bg-gray-900"
         style={{
           backgroundImage: `url(${banner.imageUrl})`,
           backgroundSize: "cover",
@@ -56,7 +85,7 @@ const BannerCarousel = () => {
 
         {/* Dots (Fixed at bottom center of banner) */}
         <div className="absolute bottom-4 flex space-x-2">
-          {bannersData.map((_, index) => (
+          {banners.map((_, index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}

@@ -1,13 +1,31 @@
-import React, { useState } from "react";
-import publicationsData from "../database/publications.json";
+import React, { useState, useEffect } from "react";
 
 const Yearwise = () => {
   const [activeTab, setActiveTab] = useState("Journal");
+  const [publications, setPublications] = useState([]); // State to hold fetched data
+  const [loading, setLoading] = useState(true); // Loading state
 
-  // Filter data based on active tab
-  const filteredData = publicationsData
+  // Fetch publications from the API when the component mounts
+  useEffect(() => {
+    const fetchPublications = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/publications/yearwise');
+        const data = await response.json();
+        setPublications(data);
+      } catch (error) {
+        console.error("Failed to fetch publications:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPublications();
+  }, []); // Empty dependency array means this runs once on mount
+
+  // Filter data based on the active tab from the state
+  const filteredData = publications
     .filter((pub) => pub.category.toLowerCase() === activeTab.toLowerCase())
-    .sort((a, b) => b.year - a.year); // latest first
+    .sort((a, b) => b.year - a.year);
 
   return (
     <div className="min-h-screen lg:mt-5 md:mt-8 max-w-6xl mx-auto text-white py-12 px-2">
@@ -36,18 +54,23 @@ const Yearwise = () => {
 
       {/* Publications List */}
       <div className="flex flex-col text-left gap-4">
-        <ol className="list-decimal list-inside space-y-3 text-sm sm:text-base md:text-lg">
-          {filteredData.map((pub, index) => (
-            <li key={index}>
-              {pub.title}{" "}
-              <span className="text-green-400 font-semibold">({pub.year})</span>
-            </li>
-          ))}
-        </ol>
-        {filteredData.length === 0 && (
-          <p className="text-gray-400 text-sm sm:text-base md:text-lg">
-            No publications available.
-          </p>
+        {loading ? (
+          <p>Loading publications...</p>
+        ) : (
+          <ol className="list-decimal list-inside space-y-3 text-sm sm:text-base md:text-lg">
+            {filteredData.length > 0 ? (
+              filteredData.map((pub, index) => (
+                <li key={pub._id || index}> {/* Use database ID as key */}
+                  {pub.title}{" "}
+                  <span className="text-green-400 font-semibold">({pub.year})</span>
+                </li>
+              ))
+            ) : (
+              <p className="text-gray-400 text-sm sm:text-base md:text-lg">
+                No publications available for this category.
+              </p>
+            )}
+          </ol>
         )}
       </div>
     </div>

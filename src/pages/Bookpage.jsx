@@ -1,10 +1,36 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import booksData from "../database/books.json";
 
 const BookPage = () => {
     const { slug } = useParams();
-    const book = booksData.find((b) => b.slug === slug);
+    const [book, setBook] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchBook = async () => {
+            try {
+                const response = await fetch(`http://localhost:5000/api/books/${slug}`);
+                if (!response.ok) {
+                    throw new Error('Book not found');
+                }
+                const data = await response.json();
+                setBook(data);
+                document.title = `${data.title} | Mahendra Verma`;
+            } catch (error) {
+                console.error("Failed to fetch book:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (slug) {
+            fetchBook();
+        }
+    }, [slug]);
+
+    if (loading) {
+        return <p className="text-center text-green-500 mt-10 text-lg md:text-xl">Loading...</p>;
+    }
 
     if (!book) {
         return <p className="text-center text-green-500 mt-10 text-lg md:text-xl">Book not found</p>;
@@ -12,7 +38,7 @@ const BookPage = () => {
 
     return (
         <div className="items-center max-w-[90%] md:max-w-[80%] mx-auto text-black min-h-screen py-8 px-2 md:px-6">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl  font-bold text-green-500 mb-6 md:mb-8 text-center md:text-left">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-green-500 mb-6 md:mb-8 text-center md:text-left">
                 {book.title}
             </h1>
 
@@ -41,12 +67,11 @@ const BookPage = () => {
                         </a>
                         <a
                             href="/extras"
-                            className="bg-green-500 w-1/2 md:w-1/3  lg:w-1/5 hover:bg-green-900 text-white font-semibold uppercase py-2 sm:py-3 px-6 text-sm sm:text-base md:text-lg rounded-full text-center flex-1 sm:flex-none transition-all duration-300"
+                            className="bg-green-500 w-1/2 md:w-1/3 lg:w-1/5 hover:bg-green-900 text-white font-semibold uppercase py-2 sm:py-3 px-6 text-sm sm:text-base md:text-lg rounded-full text-center flex-1 sm:flex-none transition-all duration-300"
                         >
                             Extras
                         </a>
                     </div>
-
                 </div>
 
                 {/* Right column */}

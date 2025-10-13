@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
-import publicationsData from "../database/subjectwise.json";
 import BlogCard from "../components/BlogCard";
 import SmallScreenDropdown from "../components/SmallScreenDropdown";
-
 
 const Subjectwise = () => {
   const categories = [
@@ -14,20 +12,35 @@ const Subjectwise = () => {
   ];
 
   const [activeTab, setActiveTab] = useState(categories[0]);
+  const [publications, setPublications] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     document.title = "Publications | Mahendra Verma";
+    
+    const fetchPublications = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/publications/subjectwise');
+        const data = await response.json();
+        setPublications(data);
+      } catch (error) {
+        console.error("Failed to fetch publications:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPublications();
   }, []);
 
-  const filteredData = publicationsData.filter(
+  const filteredData = publications.filter(
     (item) => item.category === activeTab
   );
 
   return (
     <div className="min-h-screen lg:mt-5 md:mt-5 max-w-6xl mx-auto text-white py-12 px-6">
       {/* Tabs / Dropdown */}
-      <div className="mb-8 ">
-        {/* Dropdown for small screens */}
+      <div className="mb-8">
         <div className="sm:hidden mb-2 flex justify-center">
           <SmallScreenDropdown
             title={activeTab}
@@ -35,8 +48,6 @@ const Subjectwise = () => {
             onSelect={(category) => setActiveTab(category)}
           />
         </div>
-
-        {/* Horizontal Tabs for md+ */}
         <div className="hidden sm:flex justify-center">
           <div className="flex flex-wrap rounded-full border-2 border-white overflow-hidden">
             {categories.map((category, index) => (
@@ -61,9 +72,12 @@ const Subjectwise = () => {
       {/* Content */}
       <div className="transition-all duration-500 ease-in-out">
         <div className="flex flex-col items-center gap-10">
-          {filteredData.length > 0 ? (
-            filteredData.map((item, index) => (
-              <div className="w-full md:w-7/8 lg:w-[85%]" key={index}>
+          {loading ? (
+            <p>Loading publications...</p>
+          ) : filteredData.length > 0 ? (
+            filteredData.map((item) => (
+              // FIX: Use the unique database ID for the key
+              <div className="w-full md:w-7/8 lg:w-[85%]" key={item._id}> 
                 <BlogCard
                   title={item.title}
                   content={item.description}
@@ -74,7 +88,7 @@ const Subjectwise = () => {
             ))
           ) : (
             <p className="text-gray-400 text-lg sm:text-xl md:text-2xl">
-              No publications available.
+              No publications available for this category.
             </p>
           )}
         </div>

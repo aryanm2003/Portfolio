@@ -1,22 +1,53 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import blogsData from "../database/blogs.json";
 import { ArrowLeft, Share2 } from "lucide-react";
 
 const BlogPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const [blog, setBlog] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
-  const blog = blogsData.find(
-    (item) =>
-      item.title.toLowerCase().replace(/\s+/g, "-") === slug.toLowerCase()
-  );
-
   useEffect(() => {
-    if (blog) document.title = `${blog.title} | Mahendra Verma`;
-  }, [blog]);
+    const fetchBlog = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/blogs/${slug}`);
+        if (!response.ok) {
+          // If the blog is not found (404) or other error, throw an error
+          throw new Error('Blog not found');
+        }
+        const data = await response.json();
+        setBlog(data);
+        // Set the document title after the blog data is fetched
+        document.title = `${data.title} | Mahendra Verma`;
+      } catch (error) {
+        console.error("Failed to fetch blog:", error);
+        setBlog(null); // Ensure blog is null if fetch fails
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchBlog();
+  }, [slug]); // Re-run the effect if the slug changes
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000); // Reset "Copied!" text after 2 seconds
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-300">
+        <h2>Loading blog post...</h2>
+      </div>
+    );
+  }
+  
+  // Not found state
   if (!blog) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-300">
@@ -25,12 +56,7 @@ const BlogPage = () => {
     );
   }
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
+  // Render the blog post
   return (
     <div className="min-h-screen lg:mt-8 md:mt-5 py-8 px-4 md:py-12 lg:py-16">
       <div className="max-w-4xl mx-auto text-gray-100 p-4 sm:p-6 md:p-8 lg:p-10 relative">

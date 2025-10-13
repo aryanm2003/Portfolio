@@ -1,16 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // 1. Import useEffect
 import { Link } from "react-router-dom";
 import { FaFacebook, FaXTwitter, FaLinkedin, FaYoutube } from "react-icons/fa6";
 import { FaBars, FaTimes } from "react-icons/fa";
 import Dropdown from "./Dropdown";
-import booksData from "../database/books.json";
+// No longer need to import booksData from the JSON file
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [books, setBooks] = useState([]); // 2. State to hold the fetched books
 
   const toggleMenu = () => setMenuOpen(!menuOpen);
-
   const closeMenu = () => setMenuOpen(false);
+
+  // 3. Fetch books from the API when the component mounts
+  useEffect(() => {
+    const fetchBooksForNav = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/books');
+        const data = await response.json();
+        setBooks(data);
+      } catch (error) {
+        console.error("Failed to fetch books for navbar:", error);
+      }
+    };
+
+    fetchBooksForNav();
+  }, []); // Empty array ensures this runs only once
 
   return (
     <header className=" text-white px-4 sm:px-6 lg:px-8">
@@ -51,7 +66,8 @@ const Navbar = () => {
           <Link to="/"><li className="font-medium text-gray-100 hover:text-green-500 transition">HOME</li></Link>
           <Link to="/about"><li className="font-medium text-gray-100 hover:text-green-500 transition">ABOUT</li></Link>
           <Link to="/books"><li className="font-medium text-gray-100 hover:text-green-500 transition">
-            <Dropdown title="BOOKS" items={booksData} basePath="books" />
+            {/* 4. Pass the fetched books state to the Dropdown */}
+            <Dropdown title="BOOKS" items={books} basePath="books" />
           </li></Link>
           <li className="font-medium text-gray-100 hover:text-green-500 transition">
             <Dropdown
@@ -78,7 +94,8 @@ const Navbar = () => {
           <ul className="flex flex-col items-start space-y-3 py-4 px-5">
             <Link to="/" onClick={closeMenu}><li className="hover:text-green-500">HOME</li></Link>
             <Link to="/about" onClick={closeMenu}><li className="hover:text-green-500">ABOUT</li></Link>
-            <Dropdown title="BOOKS" items={booksData} basePath="books" />
+            {/* 5. Also update the mobile dropdown */}
+            <Link to="/books"><Dropdown title="BOOKS" items={books} basePath="books" /></Link>
             <Dropdown
               title="PUBLICATIONS"
               staticItems={[
@@ -93,7 +110,6 @@ const Navbar = () => {
             <Link to="/courses" onClick={closeMenu}><li className="hover:text-green-500">COURSES</li></Link>
             <Link to="/team" onClick={closeMenu}><li className="hover:text-green-500">TEAM</li></Link>
           </ul>
-
         </div>
       )}
     </header>

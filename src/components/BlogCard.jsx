@@ -47,14 +47,25 @@ const BlogCard = ({ title, content, image, docLink, slug }) => {
 
         <div className="mt-auto">
           {docLink ? (
-            <a
-              href={docLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-green-500 font-semibold text-sm sm:text-base text-left hover:underline block mt-1 sm:mt-2"
-            >
-              Read More
-            </a>
+            docLink.startsWith("/") ? (
+              // Internal link (open in same tab)
+              <Link
+                to={docLink}
+                className="text-green-500 font-semibold text-sm sm:text-base text-left hover:underline block mt-1 sm:mt-2"
+              >
+                Read More
+              </Link>
+            ) : (
+              // External link (open in new tab)
+              <a
+                href={docLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-green-500 font-semibold text-sm sm:text-base text-left hover:underline block mt-1 sm:mt-2"
+              >
+                Read More
+              </a>
+            )
           ) : slug ? (
             <Link
               to={`/blogs/${slug}`}
@@ -68,6 +79,7 @@ const BlogCard = ({ title, content, image, docLink, slug }) => {
             </p>
           )}
         </div>
+
       </div>
     </div>
   );
