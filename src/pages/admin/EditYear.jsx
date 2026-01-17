@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, Trash2, ArrowLeft, FileText, BookOpen, Users, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowLeft, FileText, BookOpen, Users, CheckCircle, XCircle, AlertCircle, Link, X } from 'lucide-react';
 
 const EditYear = () => {
     const [publications, setPublications] = useState([]);
     const [activeCategory, setActiveCategory] = useState('Journal');
-    const [formData, setFormData] = useState({ title: '', year: '', category: 'Journal' });
+    
+    // --- State for adding multiple publications ---
+    const [publicationsToAdd, setPublicationsToAdd] = useState([
+        { title: '', year: '', link: '', category: 'Journal' }
+    ]);
+    // ---------------------------------------------
+
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState('success');
@@ -27,7 +33,7 @@ const EditYear = () => {
     const fetchPublications = async () => {
         try {
             setLoading(true);
-            const response = await fetch('http://localhost:5000/api/publications/yearwise');
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/publications/yearwise`);
             const data = await response.json();
             setPublications(data);
         } catch (error) {
@@ -51,42 +57,81 @@ const EditYear = () => {
         }
     }, [showMessage]);
 
-    const handleFormChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+    // --- Handlers for multiple publication form ---
+    const handleFormChange = (index, e) => {
+        const updatedPublications = [...publicationsToAdd];
+        updatedPublications[index][e.target.name] = e.target.value;
+        setPublicationsToAdd(updatedPublications);
     };
 
-    const handleAddPublication = async (e) => {
+    const addPublicationRow = () => {
+        // Set new row category based on the last one
+        const lastCategory = publicationsToAdd.length > 0 
+            ? publicationsToAdd[publicationsToAdd.length - 1].category 
+            : 'Journal';
+            
+        setPublicationsToAdd([
+            ...publicationsToAdd,
+            { title: '', year: '', link: '', category: lastCategory }
+        ]);
+    };
+
+    const removePublicationRow = (index) => {
+        if (publicationsToAdd.length <= 1) return; // Don't remove the last row
+        const updatedPublications = [...publicationsToAdd];
+        updatedPublications.splice(index, 1);
+        setPublicationsToAdd(updatedPublications);
+    };
+
+    const handleAddPublications = async (e) => { // Renamed to plural
         e.preventDefault();
         const token = localStorage.getItem('adminToken');
-        if (!formData.title || !formData.year) {
-            showNotification('Title and Year are required.', 'error');
+        
+        // Filter out any empty rows just in case
+        const validPublications = publicationsToAdd.filter(p => p.title && p.year);
+
+        if (validPublications.length === 0) {
+            showNotification('Please fill in at least one publication title and year.', 'error');
             return;
         }
 
         try {
-            const response = await fetch('http://localhost:5000/api/publications/yearwise', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'Authorization': `Bearer ${token}` 
-                },
-                body: JSON.stringify(formData)
-            });
-            if (!response.ok) throw new Error('Failed to add publication.');
+            // Create an array of fetch promises
+            const promises = validPublications.map(pub => 
+                fetch(`${import.meta.env.VITE_API_URL}/api/publications/yearwise`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify(pub)
+                })
+            );
+
+            // Wait for all promises to resolve
+            const responses = await Promise.all(promises);
+
+            // Check if any request failed
+            const failedResponses = responses.filter(res => !res.ok);
+            if (failedResponses.length > 0) {
+                throw new Error(`Failed to add ${failedResponses.length} publication(s). Please check console.`);
+            }
             
-            showNotification('Publication added successfully!', 'success');
-            setFormData({ title: '', year: '', category: 'Journal' });
-            fetchPublications();
+            showNotification(`Successfully added ${validPublications.length} publication(s)!`, 'success');
+            // Reset form to one empty row
+            setPublicationsToAdd([{ title: '', year: '', link: '', category: 'Journal' }]); 
+            fetchPublications(); // Refresh the main list
         } catch (error) {
             showNotification(error.message, 'error');
         }
     };
+    // -------------------------------------------
 
     const handleDeletePublication = async (id) => {
         if (!window.confirm('Are you sure you want to delete this publication?')) return;
         const token = localStorage.getItem('adminToken');
         try {
-            const response = await fetch(`http://localhost:5000/api/publications/yearwise/${id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/publications/yearwise/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -142,7 +187,7 @@ const EditYear = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white p-4 sm:p-6 md:p-10">
+        <div className="min-h-screen  text-white p-4 sm:p-6 md:p-10">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <button 
@@ -157,74 +202,121 @@ const EditYear = () => {
                 <p className="text-gray-400 mb-8">Add and manage your academic publications by category</p>
 
                 {/* Add Publication Section */}
-                <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6 mb-8">
+                <div className=" border border-gray-700 rounded-xl p-6 mb-8">
                     <h2 className="text-xl font-bold text-green-400 mb-4 flex items-center gap-2">
                         <PlusCircle size={24} />
-                        Add New Publication
+                        Add New Publications
                     </h2>
-                    <form onSubmit={handleAddPublication} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="md:col-span-2">
-                                <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-2">
-                                    Publication Title *
-                                </label>
-                                <input
-                                    type="text"
-                                    id="title"
-                                    name="title"
-                                    value={formData.title}
-                                    onChange={handleFormChange}
-                                    required
-                                    className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                                    placeholder="Enter publication title"
-                                />
+                    
+                    {/* --- Form now submits multiple --- */}
+                    <form onSubmit={handleAddPublications} className="space-y-4">
+                        
+                        {/* --- Loop to render multiple rows --- */}
+                        {publicationsToAdd.map((pub, index) => (
+                            <div key={index} className="space-y-4 p-4 border border-gray-700 rounded-lg relative">
+                                {publicationsToAdd.length > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => removePublicationRow(index)}
+                                        className="absolute top-2 right-2 text-gray-500 hover:text-red-400"
+                                        title="Remove this row"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                )}
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                                            Publication Title *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="title"
+                                            value={pub.title}
+                                            onChange={(e) => handleFormChange(index, e)}
+                                            required
+                                            className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-green-500"
+                                            placeholder="Enter publication title"
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                                            Publication Year *
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="year"
+                                            value={pub.year}
+                                            onChange={(e) => handleFormChange(index, e)}
+                                            required
+                                            min="1900"
+                                            max="2100"
+                                            className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-green-500"
+                                            placeholder="2024"
+                                        />
+                                    </div>
+                                    
+                                    {/* --- NEW LINK FIELD --- */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                                            Publication Link (Optional)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="link"
+                                            value={pub.link}
+                                            onChange={(e) => handleFormChange(index, e)}
+                                            className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-green-500"
+                                            placeholder="https://example.com/paper.pdf"
+                                        />
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                                            Category
+                                        </label>
+                                        <select
+                                            name="category"
+                                            value={pub.category}
+                                            onChange={(e) => handleFormChange(index, e)}
+                                            className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-green-500"
+                                        >
+                                            {publicationCategories.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label htmlFor="year" className="block text-sm font-medium text-gray-300 mb-2">
-                                    Publication Year *
-                                </label>
-                                <input
-                                    type="number"
-                                    id="year"
-                                    name="year"
-                                    value={formData.year}
-                                    onChange={handleFormChange}
-                                    required
-                                    min="1900"
-                                    max="2030"
-                                    className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                                    placeholder="2024"
-                                />
-                            </div>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
-                            <div className="flex-1">
-                                <label htmlFor="category" className="block text-sm font-medium text-gray-300 mb-2">
-                                    Category
-                                </label>
-                                <select
-                                    id="category"
-                                    name="category"
-                                    value={formData.category}
-                                    onChange={handleFormChange}
-                                    className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                                >
-                                    {publicationCategories.map(cat => (
-                                        <option key={cat.id} value={cat.id}>{cat.label}</option>
-                                    ))}
-                                </select>
-                            </div>
+                        ))}
+                        {/* --- End of loop --- */}
+
+                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between pt-4">
+                            <button 
+                                type="button" 
+                                onClick={addPublicationRow}
+                                className="flex items-center gap-2 text-green-400 hover:text-green-300 font-medium py-2 px-4 rounded-lg border border-green-700 hover:bg-green-900/30 transition-colors"
+                            >
+                                <PlusCircle size={18} />
+                                Add Another Row
+                            </button>
+                            
                             <button 
                                 type="submit" 
-                                className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 shadow-lg"
+                                className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 shadow-lg w-full sm:w-auto"
                             >
-                                Add Publication
+                                Add All Publications
                             </button>
                         </div>
                     </form>
                 </div>
 
-                {/* Publications List with Tabs */}
+
+                {/* Publications List with Tabs (No changes needed below this line) */}
                 <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
                     {/* Tab Headers */}
                     <div className="border-b border-gray-700">
@@ -290,7 +382,22 @@ const EditYear = () => {
                                                 <div key={pub._id} className="p-6 hover:bg-gray-900/30 transition-colors">
                                                     <div className="flex items-start justify-between">
                                                         <div className="flex-1">
-                                                            <p className="text-gray-100 text-lg mb-2">{pub.title}</p>
+                                                            {/* --- MODIFICATION TO SHOW LINK --- */}
+                                                            {pub.link ? (
+                                                                <a 
+                                                                    href={pub.link} 
+                                                                    target="_blank" 
+                                                                    rel="noopener noreferrer" 
+                                                                    className="text-gray-100 text-lg mb-2 hover:text-green-400 hover:underline inline-flex items-center gap-2"
+                                                                >
+                                                                    {pub.title}
+                                                                    <Link size={16} className="opacity-70" />
+                                                                </a>
+                                                            ) : (
+                                                                <p className="text-gray-100 text-lg mb-2">{pub.title}</p>
+                                                            )}
+                                                            {/* --- END MODIFICATION --- */}
+                                                            
                                                             <div className="flex items-center gap-4 text-sm text-gray-400">
                                                                 <span className="bg-gray-700 px-3 py-1 rounded-full">
                                                                     {pub.category}

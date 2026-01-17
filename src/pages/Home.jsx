@@ -19,7 +19,7 @@ const Home = () => {
     e.preventDefault();
     console.log("Submitting with:", { email, suggestion });
     try {
-      const response = await fetch('http://localhost:5000/api/auth/send-feedback', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/send-feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

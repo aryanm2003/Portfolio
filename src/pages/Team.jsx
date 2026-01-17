@@ -9,7 +9,7 @@ const Team = () => {
 
     const fetchTeamMembers = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/team');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/team`);
         const data = await response.json();
         setTeamMembers(data);
       } catch (error) {

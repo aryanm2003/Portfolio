@@ -17,7 +17,7 @@ const BlogCard = ({ title, content, image, docLink, slug }) => {
       {/* Image */}
       <div className="w-full md:w-1/3">
         <img
-          src={image}
+          src={`${import.meta.env.VITE_API_URL}/uploads/${image}`}
           alt={title}
           className="w-full h-48 sm:h-60 rounded-md shadow-lg object-cover"
         />

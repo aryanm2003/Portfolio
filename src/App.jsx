@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import './App.css'
 import Navbar from './components/Navbar'
-import { Route, Routes } from 'react-router-dom'
+import { Route, Routes, useLocation } from 'react-router-dom' // Import useLocation
+// ... import all your existing pages ...
 import Books from './pages/Books'
 import Home from './pages/Home'
 import Bookpage from './pages/Bookpage'
@@ -16,6 +17,9 @@ import Subjectwise from './pages/Subjectwise'
 import BlogPage from './pages/Blogpage'
 import Dashboard from './pages/Dashboard'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminLayout from './pages/admin/AdminLayout' // Import the new layout
+
+// Import all Admin Pages
 import EditBanners from './pages/admin/Editbanners'
 import EditBooks from './pages/admin/Editbooks'
 import EditYear from './pages/admin/EditYear'
@@ -26,11 +30,18 @@ import EditTeamMembers from './pages/admin/EditTeamMembers'
 import EditBlogs from './pages/admin/EditBlogs'
 
 function App() {
+  const location = useLocation();
+  // Check if current path starts with /admin
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
   return (
     <>
-      <Navbar/>
+      {/* Hide Public Navbar on Admin Pages */}
+      {!isAdminRoute && <Navbar/>}
+      
       <div>
         <Routes>
+          {/* Public Routes */}
           <Route path='/' element={<Home/>}/>
           <Route path='/books' element={<Books/>}/>
           <Route path="/books/:slug" element={<Bookpage />} />
@@ -42,20 +53,25 @@ function App() {
           <Route path="/blogs/:slug" element={<BlogPage />} />
           <Route path='/talks-articles' element={<TalksArticles/>}/>
           <Route path='/courses' element={<Courses/>}/>
-          <Route path='/admin' element={<ProtectedRoute><Dashboard/></ProtectedRoute>}/>
-          <Route path='/admin/manage-banners' element={<ProtectedRoute><EditBanners/></ProtectedRoute>}/>
-          <Route path='/admin/manage-books' element={<ProtectedRoute><EditBooks/></ProtectedRoute>}/>
-          <Route path='/admin/manage-yearwise-publications' element={<ProtectedRoute><EditYear/></ProtectedRoute>}/>
-          <Route path='/admin/manage-subjectwise-publications' element={<ProtectedRoute><EditSubjectwise/></ProtectedRoute>}/>
-          <Route path='/admin/manage-talks-articles' element={<ProtectedRoute><EditTalkArticles/></ProtectedRoute>}/>
-          <Route path='/admin/manage-courses' element={<ProtectedRoute><EditCourses/></ProtectedRoute>}/>
-          <Route path='/admin/manage-team-members' element={<ProtectedRoute><EditTeamMembers/></ProtectedRoute>}/>
-          <Route path='/admin/manage-blogs' element={<ProtectedRoute><EditBlogs/></ProtectedRoute>}/>
 
+          {/* Admin Routes Wrapped in Layout */}
+          <Route path='/admin' element={<ProtectedRoute><AdminLayout/></ProtectedRoute>}>
+            <Route index element={<Dashboard/>}/>
+            <Route path='manage-banners' element={<EditBanners/>}/>
+            <Route path='manage-books' element={<EditBooks/>}/>
+            <Route path='manage-yearwise-publications' element={<EditYear/>}/>
+            <Route path='manage-subjectwise-publications' element={<EditSubjectwise/>}/>
+            <Route path='manage-talks-articles' element={<EditTalkArticles/>}/>
+            <Route path='manage-courses' element={<EditCourses/>}/>
+            <Route path='manage-team-members' element={<EditTeamMembers/>}/>
+            <Route path='manage-blogs' element={<EditBlogs/>}/>
+          </Route>
 
         </Routes>
-        </div>
-      <Footer/>
+      </div>
+      
+      {/* Hide Public Footer on Admin Pages */}
+      {!isAdminRoute && <Footer/>}
     </>
   )
 }

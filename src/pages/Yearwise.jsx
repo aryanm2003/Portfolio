@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import {Link as RouterLink} from "react-router-dom";
+import {Link} from "lucide-react";
 
 const Yearwise = () => {
   const [activeTab, setActiveTab] = useState("Journal");
@@ -7,9 +9,10 @@ const Yearwise = () => {
 
   // Fetch publications from the API when the component mounts
   useEffect(() => {
+    document.title = "Publications | Mahendra Verma";
     const fetchPublications = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/publications/yearwise');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/publications/yearwise`);
         const data = await response.json();
         setPublications(data);
       } catch (error) {
@@ -61,7 +64,20 @@ const Yearwise = () => {
             {filteredData.length > 0 ? (
               filteredData.map((pub, index) => (
                 <li key={pub._id || index}> {/* Use database ID as key */}
-                  {pub.title}{" "}
+                  {pub.link!=='#' ? (
+                    <a
+                      href={pub.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-100 hover:text-green-400 hover:underline"
+                    >
+                      {pub.title}
+                      <Link size={14} className="inline-block ml-1 opacity-70" />
+                    </a>
+                  ) : (
+                    <span className="text-gray-100">{pub.title}</span>
+                  )}
+                  {" "}
                   <span className="text-green-400 font-semibold">({pub.year})</span>
                 </li>
               ))

@@ -16,7 +16,7 @@ const Navbar = () => {
   useEffect(() => {
     const fetchBooksForNav = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/books');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/books`);
         const data = await response.json();
         setBooks(data);
       } catch (error) {
@@ -40,7 +40,7 @@ const Navbar = () => {
           <a href="#" className="hover:text-green-500"><FaFacebook size={24} /></a>
           <a href="#" className="hover:text-green-500"><FaXTwitter size={24} /></a>
           <a href="#" className="hover:text-green-500"><FaLinkedin size={24} /></a>
-          <a href="#" className="hover:text-green-500"><FaYoutube size={24} /></a>
+          <a href="https://www.youtube.com/channel/UCY55Lzd8WtIMl1-VjqqkA7Q?view_as=subscriber" className="hover:text-green-500"><FaYoutube size={24} /></a>
         </div>
 
         {/* Hamburger Icon for Mobile */}

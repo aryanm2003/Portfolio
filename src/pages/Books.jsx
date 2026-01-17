@@ -10,7 +10,7 @@ const Books = () => {
 
     const fetchBooks = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/books');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/books`);
         const data = await response.json();
         setBooks(data);
       } catch (error) {

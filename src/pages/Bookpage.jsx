@@ -9,7 +9,7 @@ const BookPage = () => {
     useEffect(() => {
         const fetchBook = async () => {
             try {
-                const response = await fetch(`http://localhost:5000/api/books/${slug}`);
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/books/${slug}`);
                 if (!response.ok) {
                     throw new Error('Book not found');
                 }
@@ -48,9 +48,9 @@ const BookPage = () => {
                     <p className="text-gray-200 mb-4 sm:mb-5 md:mb-6 leading-relaxed text-sm sm:text-base md:text-lg">
                         {book.about}
                     </p>
-                    <p className="text-gray-200 mb-4 sm:mb-5 md:mb-6 leading-relaxed text-sm sm:text-base md:text-lg">
+                    {/* <p className="text-gray-200 mb-4 sm:mb-5 md:mb-6 leading-relaxed text-sm sm:text-base md:text-lg">
                         {book.about}
-                    </p>
+                    </p> */}
 
                     <div className="flex flex-col items-center sm:flex-row sm:justify-start gap-3 md:gap-4 w-full">
                         <a
@@ -78,7 +78,7 @@ const BookPage = () => {
                 <div className="md:w-2/5 flex flex-col items-center">
                     {book.image ? (
                         <img
-                            src={book.image}
+                            src={`${import.meta.env.VITE_API_URL}/uploads/${book.image}`}
                             alt={book.title}
                             className="w-60 sm:w-64 md:w-72 h-auto rounded-lg shadow-lg mb-6 object-contain"
                         />

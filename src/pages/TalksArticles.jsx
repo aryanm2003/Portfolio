@@ -11,7 +11,7 @@ const TalksArticles = () => {
 
     const fetchItems = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/talks-articles');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/talks-articles`);
         const data = await response.json();
         setItems(data);
       } catch (error) {

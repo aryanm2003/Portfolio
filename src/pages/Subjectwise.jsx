@@ -20,7 +20,7 @@ const Subjectwise = () => {
     
     const fetchPublications = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/publications/subjectwise');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/publications/subjectwise`);
         const data = await response.json();
         setPublications(data);
       } catch (error) {

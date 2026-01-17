@@ -12,7 +12,7 @@ const BlogPage = () => {
   useEffect(() => {
     const fetchBlog = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/blogs/${slug}`);
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/blogs/${slug}`);
         if (!response.ok) {
           // If the blog is not found (404) or other error, throw an error
           throw new Error('Blog not found');
@@ -79,9 +79,9 @@ const BlogPage = () => {
         </div>
 
         {/* Blog Title */}
-        <h1 className="text-3xl sm:text-4xl md:text-5xl text-green-500 font-bold text-left mb-5">
+        {/* <h1 className="text-3xl sm:text-4xl md:text-5xl text-green-500 font-bold text-left mb-5">
           {blog.title}
-        </h1>
+        </h1> */}
 
         {/* Blog Content */}
         <div

@@ -9,7 +9,7 @@ const BannerCarousel = () => {
   useEffect(() => {
     const fetchBanners = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/banners');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banners`);
         const data = await response.json();
         setBanners(data);
       } catch (error) {
@@ -62,7 +62,7 @@ const BannerCarousel = () => {
       <div
         className="relative w-full h-[420px] flex items-center justify-center transition-all duration-500 bg-gray-900"
         style={{
-          backgroundImage: `url(${banner.imageUrl})`,
+          backgroundImage: `url(${import.meta.env.VITE_API_URL}/uploads/${banner.imageUrl})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}

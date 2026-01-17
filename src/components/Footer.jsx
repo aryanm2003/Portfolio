@@ -23,7 +23,7 @@ const Footer = () => {
           <a href="#" className="hover:text-green-500 transition">
             <FaLinkedin className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
           </a>
-          <a href="#" className="hover:text-green-500 transition">
+          <a href="https://www.youtube.com/channel/UCY55Lzd8WtIMl1-VjqqkA7Q?view_as=subscriber" className="hover:text-green-500 transition">
             <FaYoutube className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
           </a>
         </div>

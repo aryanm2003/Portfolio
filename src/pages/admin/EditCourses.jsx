@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, PlusCircle, Edit, CheckCircle, XCircle, AlertCircle, Monitor, Users } from 'lucide-react';
+import { ArrowLeft, Trash2, PlusCircle, Edit, CheckCircle, XCircle, AlertCircle, Monitor, Users, Upload } from 'lucide-react';
 
 const EditCourses = () => {
     const [activeTab, setActiveTab] = useState('add');
@@ -20,6 +20,12 @@ const EditCourses = () => {
         category: 'online'
     });
     
+    // --- NEW STATE for handling upload ---
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [imagePreview, setImagePreview] = useState('');
+    // ------------------------------------
+    
     const [filterCategory, setFilterCategory] = useState('All');
     const categories = [
         { id: 'online', label: 'Online Courses', icon: Monitor },
@@ -35,7 +41,7 @@ const EditCourses = () => {
     const fetchCourses = async () => {
         try {
             setLoading(true);
-            const response = await fetch('http://localhost:5000/api/courses');
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/courses`);
             const data = await response.json();
             setCourses(data);
         } catch (error) {
@@ -59,65 +65,150 @@ const EditCourses = () => {
         }
     }, [showMessage]);
 
+    // --- NEW FUNCTION: Clear form and file input ---
+    const clearForm = () => {
+        setFormData({ title: '', content: '', image: '', docLink: '', category: 'online' });
+        setSelectedFile(null);
+        setImagePreview('');
+        if (document.getElementById('imageUploadInput')) {
+            document.getElementById('imageUploadInput').value = null;
+        }
+    };
+
     useEffect(() => {
         setSelectedCourseId('');
-        setFormData({ title: '', content: '', image: '', docLink: '', category: 'online' });
+        clearForm();
     }, [activeTab, filterCategory]);
 
     useEffect(() => {
         if (selectedCourseId) {
             const selectedCourse = courses.find(c => c._id === selectedCourseId);
-            if (selectedCourse) setFormData(selectedCourse);
+            if (selectedCourse) {
+                setFormData(selectedCourse);
+                if (selectedCourse.image) {
+                        setImagePreview(`${import.meta.env.VITE_API_URL}/uploads/${selectedCourse.image}`);
+                    } else {
+                        setImagePreview('');
+                    }
+                setSelectedFile(null);
+            }
         } else {
-            setFormData({ title: '', content: '', image: '', docLink: '', category: 'online' });
+            clearForm();
         }
     }, [selectedCourseId, courses]);
 
     const handleFormChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
+    
+    // --- NEW FUNCTION: Handles file selection ---
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedFile(file);
+            setImagePreview(URL.createObjectURL(file)); 
+        }
+    };
+
+    // --- NEW FUNCTION: Uploads file, returns URL or throws error ---
+    const uploadImage = async () => {
+        if (!selectedFile) {
+            throw new Error("No file selected for upload.");
+        }
+        
+        const token = localStorage.getItem('adminToken');
+        const fileFormData = new FormData();
+        fileFormData.append('image', selectedFile);
+
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: fileFormData
+        });
+
+        if (res.status === 401) {
+            localStorage.removeItem('adminToken');
+            navigate('/');
+            throw new Error("Session expired. Please log in.");
+        }
+        if (!res.ok) throw new Error('Image upload failed.');
+        
+        const data = await res.json();
+        return data.imageUrl; // Returns the server URL
+    };
 
     // --- API Handlers ---
     const handleAdd = async (e) => {
         e.preventDefault();
+        
+        if (!selectedFile) {
+            showNotification('Please select a course image.', 'error');
+            return;
+        }
+        
         const token = localStorage.getItem('adminToken');
+        setIsSubmitting(true);
         try {
-            const res = await fetch('http://localhost:5000/api/courses', {
+            // 1. Upload image
+            const finalImageUrl = await uploadImage();
+            
+            // 2. Save course
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/courses`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json', 
                     'Authorization': `Bearer ${token}` 
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ ...formData, image: finalImageUrl })
             });
+            if (res.status === 401) throw new Error("Session expired. Please log in.");
             if (!res.ok) throw new Error('Failed to add course');
             
             showNotification('Course added successfully!', 'success');
             fetchCourses();
-            setFormData({ title: '', content: '', image: '', docLink: '', category: 'online' });
+            clearForm();
         } catch (error) { 
             showNotification(error.message, 'error');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const handleUpdate = async (e) => {
         e.preventDefault();
         const token = localStorage.getItem('adminToken');
+        setIsSubmitting(true);
         try {
-            const res = await fetch(`http://localhost:5000/api/courses/${selectedCourseId}`, {
+            let finalImageUrl = formData.image; // Default to existing
+            
+            // 1. If new file, upload it
+            if (selectedFile) {
+                finalImageUrl = await uploadImage();
+            }
+            
+            // 2. Update course
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/courses/${selectedCourseId}`, {
                 method: 'PUT',
                 headers: { 
                     'Content-Type': 'application/json', 
                     'Authorization': `Bearer ${token}` 
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ ...formData, image: finalImageUrl })
             });
+            if (res.status === 401) throw new Error("Session expired. Please log in.");
             if (!res.ok) throw new Error('Failed to update course');
             
             showNotification('Course updated successfully!', 'success');
             fetchCourses();
+            setSelectedFile(null);
+            setImagePreview(finalImageUrl);
+            if (document.getElementById('imageUploadInput')) {
+                document.getElementById('imageUploadInput').value = null;
+            }
         } catch (error) { 
             showNotification(error.message, 'error');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -125,7 +216,7 @@ const EditCourses = () => {
         if (!window.confirm('Are you sure you want to delete this course?')) return;
         const token = localStorage.getItem('adminToken');
         try {
-            const res = await fetch(`http://localhost:5000/api/courses/${id}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/courses/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -195,24 +286,26 @@ const EditCourses = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Course Image URL</label>
-                        <input 
-                            name="image" 
-                            value={formData.image} 
-                            onChange={handleFormChange} 
-                            className="w-full bg-gray-900 p-3 rounded-lg border border-gray-600 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                            placeholder="https://example.com/course-image.jpg"
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Course Image *</label>
+                        {/* --- MODIFIED IMAGE INPUT --- */}
+                        <input
+                            type="file"
+                            id="imageUploadInput"
+                            onChange={handleFileChange}
+                            accept="image/*"
+                            className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4
+                                      file:rounded-lg file:border-0 file:text-sm file:font-semibold
+                                      file:bg-green-600 file:text-white hover:file:bg-green-700
+                                      cursor-pointer"
                         />
-                        {formData.image && (
-                            <div className="mt-2">
+                        {imagePreview && (
+                            <div className="mt-4">
                                 <p className="text-xs text-gray-400 mb-1">Image Preview:</p>
                                 <img 
-                                    src={formData.image} 
+                                    src={imagePreview} 
                                     alt="Course preview" 
                                     className="h-20 rounded border border-gray-600 object-cover"
-                                    onError={(e) => {
-                                        e.target.style.display = 'none';
-                                    }}
+                                    onError={(e) => { e.target.src = 'https://placehold.co/600x400/0f172a/34d399?text=Image+Error'; }}
                                 />
                             </div>
                         )}
@@ -246,11 +339,20 @@ const EditCourses = () => {
                 </div>
             </div>
             
+            {/* --- MODIFIED BUTTON --- */}
             <button 
                 type="submit" 
-                className="bg-green-600 hover:bg-green-700 font-bold py-3 px-6 rounded-lg transition-colors shadow-lg"
+                disabled={isSubmitting}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 font-bold py-3 px-6 rounded-lg transition-colors shadow-lg disabled:opacity-50"
             >
-                {buttonText}
+                {isSubmitting ? (
+                    <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        Processing...
+                    </>
+                ) : (
+                    buttonText
+                )}
             </button>
         </form>
     );
@@ -272,7 +374,7 @@ const EditCourses = () => {
     );
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white p-4 sm:p-6 md:p-10">
+        <div className="min-h-screen  text-white p-4 sm:p-6 md:p-10">
             <div className="max-w-4xl mx-auto">
                 <button 
                     onClick={() => navigate('/admin')} 
@@ -283,7 +385,9 @@ const EditCourses = () => {
                 
                 <h1 className="text-3xl font-bold text-white mb-2">Manage Courses</h1>
                 <p className="text-gray-400 mb-8">Add and manage online and offline courses</p>
-
+                
+                {/* ... (Tabs, loading spinner, delete tab, etc. remain the same) ... */}
+                
                 <div className="flex border-b border-gray-700 mb-8 gap-8">
                     <button 
                         onClick={() => setActiveTab('add')} 
@@ -320,7 +424,7 @@ const EditCourses = () => {
                     </button>
                 </div>
 
-                <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
+                <div className=" border-gray-700 rounded-xl p-6">
                     {loading ? (
                         <div className="flex justify-center items-center py-12">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>

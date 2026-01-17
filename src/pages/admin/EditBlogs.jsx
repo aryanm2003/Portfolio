@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, PlusCircle, Edit, CheckCircle, XCircle, AlertCircle, FileText, Image } from 'lucide-react';
+import { ArrowLeft, Trash2, PlusCircle, Edit, CheckCircle, XCircle, AlertCircle, FileText, Image,Upload } from 'lucide-react';
 
 const EditBlogs = () => {
     const [activeTab, setActiveTab] = useState('add');
@@ -19,6 +19,10 @@ const EditBlogs = () => {
         fullContent: ''
     });
 
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [imagePreview, setImagePreview] = useState('');
+
     const showNotification = (msg, type = 'success') => {
         setMessage(msg);
         setMessageType(type);
@@ -28,7 +32,7 @@ const EditBlogs = () => {
     const fetchBlogs = async () => {
         try {
             setLoading(true);
-            const response = await fetch('http://localhost:5000/api/blogs');
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/blogs`);
             const data = await response.json();
             setBlogs(data);
         } catch (error) {
@@ -52,6 +56,15 @@ const EditBlogs = () => {
         }
     }, [showMessage]);
 
+    const clearForm = () => {
+        setFormData({ title: '', content: '', image: '', fullContent: '' });
+        setSelectedFile(null);
+        setImagePreview('');
+        if (document.getElementById('imageUploadInput')) {
+            document.getElementById('imageUploadInput').value = null;
+        }
+    };
+
     useEffect(() => {
         setSelectedBlogId('');
         setFormData({ title: '', content: '', image: '', fullContent: '' });
@@ -63,9 +76,16 @@ const EditBlogs = () => {
                 const selectedBlogStub = blogs.find(b => b._id === selectedBlogId);
                 if(selectedBlogStub) {
                     try {
-                        const response = await fetch(`http://localhost:5000/api/blogs/${selectedBlogStub.slug}`);
+                        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/blogs/${selectedBlogStub.slug}`);
                         const fullData = await response.json();
                         setFormData(fullData);
+                        setImagePreview(fullData.image);
+                        if (fullData.image) {
+                             setImagePreview(`${import.meta.env.VITE_API_URL}/uploads/${fullData.image}`);
+                        } else {
+                             setImagePreview('');
+                        } // Set existing image for preview
+                        setSelectedFile(null);
                     } catch (error) {
                         showNotification("Failed to fetch full blog content.", "error");
                     }
@@ -82,47 +102,117 @@ const EditBlogs = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedFile(file);
+            setImagePreview(URL.createObjectURL(file)); 
+        }
+    };
+    const uploadImage = async () => {
+        if (!selectedFile) {
+            throw new Error("No file selected for upload.");
+        }
+        
+        const token = localStorage.getItem('adminToken');
+        const fileFormData = new FormData();
+        fileFormData.append('image', selectedFile);
+
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: fileFormData
+        });
+
+        if (res.status === 401) {
+            localStorage.removeItem('adminToken');
+            navigate('/');
+            throw new Error("Session expired. Please log in.");
+        }
+        if (!res.ok) throw new Error('Image upload failed.');
+        
+        const data = await res.json();
+        return data.imageUrl; // Returns the server URL
+    };
     // --- API Handlers ---
     const handleAdd = async (e) => {
         e.preventDefault();
+        
+        if (!selectedFile) {
+            showNotification('Please select a featured image.', 'error');
+            return;
+        }
+
         const token = localStorage.getItem('adminToken');
+        setIsSubmitting(true);
+        
         try {
-            const res = await fetch('http://localhost:5000/api/blogs', {
+            // 1. Upload image
+            const finalImageUrl = await uploadImage();
+            
+            // 2. Save blog post with the new URL
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/blogs`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json', 
                     'Authorization': `Bearer ${token}` 
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ ...formData, image: finalImageUrl }) // Use new URL
             });
+            
+            if (res.status === 401) throw new Error("Session expired. Please log in.");
             if (!res.ok) throw new Error('Failed to add blog');
             
             showNotification('Blog post added successfully!', 'success');
             fetchBlogs();
-            setFormData({ title: '', content: '', image: '', fullContent: '' });
+            clearForm();
         } catch (error) { 
             showNotification(error.message, 'error');
+        } finally {
+            setIsSubmitting(false);
         }
     };
+
 
     const handleUpdate = async (e) => {
         e.preventDefault();
         const token = localStorage.getItem('adminToken');
+        setIsSubmitting(true);
+        
         try {
-            const res = await fetch(`http://localhost:5000/api/blogs/${selectedBlogId}`, {
+            let finalImageUrl = formData.image; // Default to existing image
+            
+            // 1. If a *new* file was selected, upload it
+            if (selectedFile) {
+                finalImageUrl = await uploadImage();
+            }
+            
+            // 2. Update the blog post
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/blogs/${selectedBlogId}`, {
                 method: 'PUT',
                 headers: { 
                     'Content-Type': 'application/json', 
                     'Authorization': `Bearer ${token}` 
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ ...formData, image: finalImageUrl })
             });
+
+            if (res.status === 401) throw new Error("Session expired. Please log in.");
             if (!res.ok) throw new Error('Failed to update blog');
             
             showNotification('Blog post updated successfully!', 'success');
             fetchBlogs();
+            // Don't clear form, just clear file input
+            setSelectedFile(null);
+            setImagePreview(finalImageUrl);
+            if (document.getElementById('imageUploadInput')) {
+                document.getElementById('imageUploadInput').value = null;
+            }
+
         } catch (error) { 
             showNotification(error.message, 'error');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -130,7 +220,7 @@ const EditBlogs = () => {
         if (!window.confirm('Are you sure you want to delete this blog post?')) return;
         const token = localStorage.getItem('adminToken');
         try {
-            const res = await fetch(`http://localhost:5000/api/blogs/${id}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/blogs/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -186,24 +276,26 @@ const EditBlogs = () => {
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Featured Image URL</label>
-                        <input 
-                            name="image" 
-                            value={formData.image} 
-                            onChange={handleFormChange} 
-                            className="w-full bg-gray-900 p-3 rounded-lg border border-gray-600 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                            placeholder="https://example.com/blog-image.jpg"
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Featured Image *</label>
+                        {/* --- MODIFIED IMAGE INPUT --- */}
+                        <input
+                            type="file"
+                            id="imageUploadInput"
+                            onChange={handleFileChange}
+                            accept="image/*"
+                            className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4
+                                      file:rounded-lg file:border-0 file:text-sm file:font-semibold
+                                      file:bg-green-600 file:text-white hover:file:bg-green-700
+                                      cursor-pointer"
                         />
-                        {formData.image && (
-                            <div className="mt-2">
+                        {imagePreview && (
+                            <div className="mt-4">
                                 <p className="text-xs text-gray-400 mb-1">Image Preview:</p>
                                 <img 
-                                    src={formData.image} 
+                                    src={imagePreview} 
                                     alt="Blog preview" 
                                     className="h-32 rounded border border-gray-600 object-cover"
-                                    onError={(e) => {
-                                        e.target.style.display = 'none';
-                                    }}
+                                    onError={(e) => { e.target.src = 'https://placehold.co/600x400/0f172a/34d399?text=Image+Error'; }}
                                 />
                             </div>
                         )}
@@ -243,17 +335,26 @@ const EditBlogs = () => {
                 </div>
             </div>
             
+            {/* --- MODIFIED BUTTON --- */}
             <button 
                 type="submit" 
-                className="bg-green-600 hover:bg-green-700 font-bold py-3 px-6 rounded-lg transition-colors shadow-lg"
+                disabled={isSubmitting}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 font-bold py-3 px-6 rounded-lg transition-colors shadow-lg disabled:opacity-50"
             >
-                {buttonText}
+                {isSubmitting ? (
+                    <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        Processing...
+                    </>
+                ) : (
+                    buttonText
+                )}
             </button>
         </form>
     );
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white p-4 sm:p-6 md:p-10">
+        <div className="min-h-screen  text-white p-4 sm:p-6 md:p-10">
             <div className="max-w-6xl mx-auto">
                 <button 
                     onClick={() => navigate('/admin')} 
@@ -301,7 +402,7 @@ const EditBlogs = () => {
                     </button>
                 </div>
 
-                <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
+                <div className=" border border-gray-700 rounded-xl p-6">
                     {loading ? (
                         <div className="flex justify-center items-center py-12">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
@@ -372,7 +473,7 @@ const EditBlogs = () => {
                                                         <div className="flex-shrink-0">
                                                             {b.image ? (
                                                                 <img 
-                                                                    src={b.image} 
+                                                                    src={`${import.meta.env.VITE_API_URL}/uploads/${b.image}`}
                                                                     alt={b.title}
                                                                     className="h-16 w-16 rounded object-cover border border-gray-600"
                                                                 />

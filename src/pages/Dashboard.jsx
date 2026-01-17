@@ -32,15 +32,15 @@ const Dashboard = () => {
 
         {/* Header */}
         <div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-100">
+          <div className='mx-5'>
+            <h1 className="text-3xl md:text-4xl text-left font-bold text-gray-100">
               Hello, Sir
             </h1>
             <p className="text-gray-400 mt-3">Welcome to your content management panel.</p>
           </div>
           <button
             onClick={handleLogout}
-            className=" text-white hover:text-green-500 font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center gap-2"
+            className="  mx-6 text-red-400 hover:text-red-500 font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center gap-2"
           >
             <LogOut size={30} />
           </button>
@@ -54,7 +54,7 @@ const Dashboard = () => {
                 .toLowerCase()
                 .replace(/ & /g, '-')
                 .replace(/ /g, '-')}`}
-              className="bg-gray-800/50 border border-gray-700 p-8 rounded-xl shadow-lg hover:border-green-500 hover:-translate-y-2 transition-all duration-300 group w-72"
+              className=" border border-gray-700 p-8 rounded-xl shadow-lg hover:border-green-500 hover:-translate-y-2 transition-all duration-300 group w-72"
             >
               <div className="text-green-400 group-hover:text-green-300 transition-colors flex justify-center">
                 {section.icon}

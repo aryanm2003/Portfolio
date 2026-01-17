@@ -7,7 +7,7 @@ const BookCard = ({ book }) => {
     <div onClick={() => navigate(`/books/${book.slug}`)}
      className="rounded-xl hover:shadow-lg transition-shadow duration-300 cursor-pointer">
       <img 
-        src={book.image} 
+        src={`${import.meta.env.VITE_API_URL}/uploads/${book.image}`} 
         alt={book.title} 
         className="w-80 h-fit object-fit"
       />
